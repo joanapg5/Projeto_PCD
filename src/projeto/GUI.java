@@ -76,7 +76,7 @@ public class GUI {
 		}
 		JPanel answers=new JPanel(new GridLayout(gridsize,2, 10, 10));
 		optionButtons=new JButton[4];
-		Color[] colors = {Color.RED, Color.BLUE, new Color(139, 0, 139), Color.GREEN};
+		Color[] colors = {new Color(171,0,11), new Color(0,2,154), new Color(139, 0, 139), new Color(4,138,0)};
 		for (int i=0; i<options.length; i++) {
             optionButtons[i]=new JButton(options[i]);
             answers.add(optionButtons[i]);
