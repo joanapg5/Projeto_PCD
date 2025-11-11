@@ -175,11 +175,14 @@ public class GUI {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				//PROVISORIO
-				if(current>=questions.size()){
-					frame.setVisible(false);
+				if(current<questions.size()-1){
+					current+=1;
+					addQuestionFrame(questions.get(current));
+				}else{
+					endOfGame();
+					
 				}
-				addQuestionFrame(questions.get(current+1));
-				current+=1;
+				
 				
 			}
 		});
@@ -196,6 +199,26 @@ public class GUI {
 	public void open() {
 		// para abrir a janela (torna-la visivel)
 		frame.setVisible(true);
+	}
+	
+	public void endOfGame() {
+		
+		frame.getContentPane().removeAll();
+		frame.setLayout(new BorderLayout(10,10));
+		
+		JPanel end=new JPanel();
+		titleLable=new JLabel("Fim do Jogo", JLabel.CENTER);
+		end.add(titleLable);
+		
+		frame.add(end, BorderLayout.CENTER);
+		
+		
+		
+		frame.pack();
+	    frame.revalidate();
+	    frame.repaint();
+		
+		
 	}
 	
 	

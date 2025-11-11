@@ -36,7 +36,7 @@ public class Main {
         GUI window = new GUI();
         window.open();
         
-        window.setCurrent(0);
+        
         window.setQuestions(questions);
 
         
