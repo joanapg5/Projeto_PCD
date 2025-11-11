@@ -35,27 +35,16 @@ public class Main {
         
         GUI window = new GUI();
         window.open();
+        
+        window.setCurrent(0);
+        window.setQuestions(questions);
 
         
         window.addQuestionFrame(questions.get(0));
 
-        // so para efeitos de simulacao por agora
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         
-        window.addStatsFrame(gs.getScoreboard());
         
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         
-        window.addQuestionFrame(questions.get(1));
         
     }
 		
