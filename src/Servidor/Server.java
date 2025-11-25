@@ -46,7 +46,7 @@ public class Server {
 	
 
 	
-	
+	// connection handler é so para o servidor?
 	private class ConnectionHandler extends Thread{
 		private Socket connection; //connection
 		private Scanner in; //stream reader

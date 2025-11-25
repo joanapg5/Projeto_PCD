@@ -18,7 +18,7 @@ public class Main {
      
         List<Question> questions = null;
         try {
-            questions = QuestionLoader.load("dados/perguntas.json", "PCD - 1"); 
+            questions = QuestionLoader.load("dados/quizzes.json", "PCD-1"); 
         } catch (Exception e) {
             e.printStackTrace();
             return;
