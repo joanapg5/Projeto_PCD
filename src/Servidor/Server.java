@@ -62,7 +62,7 @@ public class Server {
 		System.out.println("Started new connection...");
 	}
 
-	// connection handler � so para o servidor?
+	// connection handler ï¿½ so para o servidor?
 	private class DealWithClient extends Thread {
 		private Socket connection;
 		private ObjectInputStream in; // MUDOU de Scanner para ObjectInputStream
@@ -81,7 +81,7 @@ public class Server {
 			try {
 				setStreams();
 				processConnection();
-			} catch (Exception e) { // Catch genérico para apanhar ClassNotFoundException também
+			} catch (Exception e) { // Catch genÃ©rico para apanhar ClassNotFoundException tambÃ©m
 				e.printStackTrace();
 			} finally {
 				closeConnection();
@@ -89,9 +89,9 @@ public class Server {
 		}
 
 		private void setStreams() throws IOException {
-			// ORDEM CRÍTICA: Primeiro o Output, Flush, depois o Input
+			// ORDEM CRÃ�TICA: Primeiro o Output, Flush, depois o Input
 			out = new ObjectOutputStream(connection.getOutputStream());
-			out.flush(); // Garante que o cabeçalho é enviado para o cliente não bloquear
+			out.flush(); // Garante que o cabeÃ§alho Ã© enviado para o cliente nÃ£o bloquear
 			in = new ObjectInputStream(connection.getInputStream());
 		}
 
@@ -106,21 +106,21 @@ public class Server {
 					if (s.length == 3) {
 						processFirstConnection(s[0], s[1], s[2]);
 					} else {
-						out.writeObject(new Message(Message.Type.LOGIN_ERROR, "Formato inválido.", "Server"));
+						out.writeObject(new Message(Message.Type.LOGIN_ERROR, "Formato invÃ¡lido.", "Server"));
 						closeConnection();
-						return; // Sai se o formato for inválido
+						return; // Sai se o formato for invÃ¡lido
 					}
 				}
 			}
 
-			// Se a conexão foi fechada por erro no login (ex: user repetido), saímos.
+			// Se a conexÃ£o foi fechada por erro no login (ex: user repetido), saÃ­mos.
 			if (connection.isClosed()) return;
 
 			// --- PASSO 2: LOOP PRINCIPAL (AGUARDAR MENSAGENS DO JOGO) ---
 			// A thread fica aqui presa e viva enquanto o cliente estiver ligado
 			while (true) {
 				try {
-					Object nextObj = in.readObject(); // Bloqueia à espera de mensagens (ex: Respostas)
+					Object nextObj = in.readObject(); // Bloqueia Ã  espera de mensagens (ex: Respostas)
 					if (nextObj instanceof Message) {
 						Message msg = (Message) nextObj;
 						System.out.println("Mensagem recebida de " + msg.getSender() + ": " + msg.getType());
@@ -140,26 +140,22 @@ public class Server {
 
 		// confirmar se nao podem existir usernames repetidos mesmo que em jogos dif
 		private void processFirstConnection(String roomCode, String teamName, String username) throws IOException {
-			synchronized (games) {
-				if (usernameExists(username)) {
-					out.writeObject(new Message(Message.Type.LOGIN_ERROR, "O username está em utilização.", "Server"));
-					closeConnection();
-					return;
-				}
-			}
+			//isto precisa de ser sinchronized?
 			if (!games.containsKey(roomCode)) {
-				out.writeObject(new Message(Message.Type.LOGIN_ERROR, "O jogo não existe.", "Server"));
+				out.writeObject(new Message(Message.Type.LOGIN_ERROR, "O jogo nÃ£o existe.", "Server"));
 				closeConnection();
 				return;
 			}
 			GameState game = games.get(roomCode);
+			//substituir aqui pela funcao
 			synchronized (game) { // para o mesmo game nao podem executar este bloco 2 players ao mm tempo
+				//metodo do gamestate
 				Map<String, Team> teams = game.getTeams();
 				Team team = teams.get(teamName);
 				if (team == null) {
 					if (game.reachedTeamLimit()) {
 						out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-								"O jogo já esgotou o número de equipas previsto.", "Server"));
+								"O jogo jÃ¡ esgotou o nÃºmero de equipas previsto.", "Server"));
 						closeConnection();
 						return;
 					}
@@ -168,7 +164,7 @@ public class Server {
 				} else {
 					if (game.isTeamFull(team)) {
 						out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-								"A equipa está cheia.", "Server"));
+								"A equipa estÃ¡ cheia.", "Server"));
 						closeConnection();
 						return;
 					}
@@ -188,22 +184,13 @@ public class Server {
 				
 				if (game.areAllPlayersConnected()) {
 					System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
-					// lógica do broadcast (implementada no GameState)
-        			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai começar", "Server"));
+					// lÃ³gica do broadcast (implementada no GameState)
+        			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai comeÃ§ar", "Server"));
 				}
 			}
 		}
 
-		// verifica em todos os jogos se o username esta a ser utilizado, considerar??
-		private boolean usernameExists(String username) {
-			for (GameState g : games.values()) {
-				for (String u : g.getAllUsernames()) {
-					if (u.equals(username))
-						return true;
-				}
-			}
-			return false;
-		}
+		
 
 		public void closeConnection() {
 			try {
@@ -255,10 +242,10 @@ public class Server {
 			GameState g = new GameState(code, numTeams, numTeamPlayers, questions);
 			games.put(code, g);
 
-			System.out.println("Nova sala criada com o código: " + code
-				+ "\nNúmero de equipas: " + numTeams
-				+ "\nNúmero de jogadores por equipa: " + numTeamPlayers
-				+ "\nNúmero de perguntas: " + numQuestions
+			System.out.println("Nova sala criada com o cÃ³digo: " + code
+				+ "\nNÃºmero de equipas: " + numTeams
+				+ "\nNÃºmero de jogadores por equipa: " + numTeamPlayers
+				+ "\nNÃºmero de perguntas: " + numQuestions
 			);
 		}
 

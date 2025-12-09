@@ -114,5 +114,63 @@ public class GameState {
             }
         }
     }
+    
+    public boolean repeatedUsername(String username){
+    	List<String> usernames= getAllUsernames();
+    	for (String u : usernames) {
+			if (u.equals(username))
+				return true;
+		}
+    	return false;
+    }
+    
+    
+    public void addTeamAndPlayer(ObjectOutputStream out, GameState game, String teamName, String username){
+		if(game.repeatedUsername(username)){
+			out.writeObject(new Message(Message.Type.LOGIN_ERROR,
+					"Username repetido.", "Server"));
+			closeConnection();
+			return;
+			
+		}
+		Map<String, Team> teams = game.getTeams();
+		Team team = teams.get(teamName);
+		if (team == null) {
+			if (game.reachedTeamLimit()) {
+				out.writeObject(new Message(Message.Type.LOGIN_ERROR,
+						"O jogo já esgotou o número de equipas previsto.", "Server"));
+				closeConnection();
+				return;
+			}
+			team = new Team(teamName);
+			teams.put(teamName, team);
+		} else {
+			if (game.isTeamFull(team)) {
+				out.writeObject(new Message(Message.Type.LOGIN_ERROR,
+						"A equipa está cheia.", "Server"));
+				closeConnection();
+				return;
+			}
+		}
+
+		Player newPlayer = new Player(username);
+		team.addPlayer(new Player(username));
+		myGame = game;
+		myTeam = team;
+		myPlayer = newPlayer;
+
+		// adicionado para broadcast
+		game.addPlayerStream(out);
+
+		game.addConnectedPlayers();
+		out.writeObject(new Message(Message.Type.LOGIN_SUCCESS, "Bem-vindo!", "Server"));
+		
+		if (game.areAllPlayersConnected()) {
+			System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
+			// lógica do broadcast (implementada no GameState)
+			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai começar", "Server"));
+		}
+		
+    }
 
 }
