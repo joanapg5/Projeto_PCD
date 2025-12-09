@@ -142,52 +142,42 @@ public class Server {
 		private void processFirstConnection(String roomCode, String teamName, String username) throws IOException {
 			//isto precisa de ser sinchronized?
 			if (!games.containsKey(roomCode)) {
-				out.writeObject(new Message(Message.Type.LOGIN_ERROR, "O jogo nÃ£o existe.", "Server"));
+				out.writeObject(new Message(Message.Type.LOGIN_ERROR, "O jogo não existe.", "Server"));
 				closeConnection();
 				return;
 			}
 			GameState game = games.get(roomCode);
 			//substituir aqui pela funcao
-			synchronized (game) { // para o mesmo game nao podem executar este bloco 2 players ao mm tempo
-				//metodo do gamestate
-				Map<String, Team> teams = game.getTeams();
-				Team team = teams.get(teamName);
-				if (team == null) {
-					if (game.reachedTeamLimit()) {
-						out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-								"O jogo jÃ¡ esgotou o nÃºmero de equipas previsto.", "Server"));
-						closeConnection();
-						return;
-					}
-					team = new Team(teamName);
-					teams.put(teamName, team);
-				} else {
-					if (game.isTeamFull(team)) {
-						out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-								"A equipa estÃ¡ cheia.", "Server"));
-						closeConnection();
-						return;
-					}
-				}
-
-				Player newPlayer = new Player(username);
-				team.addPlayer(new Player(username));
-				myGame = game;
-				myTeam = team;
-				myPlayer = newPlayer;
-
-				// adicionado para broadcast
-				game.addPlayerStream(out);
-
-				game.addConnectedPlayers();
-				out.writeObject(new Message(Message.Type.LOGIN_SUCCESS, "Bem-vindo!", "Server"));
-				
-				if (game.areAllPlayersConnected()) {
-					System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
-					// lÃ³gica do broadcast (implementada no GameState)
-        			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai comeÃ§ar", "Server"));
-				}
+			LoginResult r = game.addTeamAndPlayer(out, teamName, username);
+			switch (r) {
+		        case USERNAME_EXISTS:
+		            out.writeObject(new Message(Message.Type.LOGIN_ERROR, "Username repetido.", "Server"));
+		            closeConnection();
+		            return;
+	
+		        case TEAM_LIMIT_REACHED:
+		            out.writeObject(new Message(Message.Type.LOGIN_ERROR, "Limite de equipas atingido.", "Server"));
+		            closeConnection();
+		            return;
+	
+		        case TEAM_FULL:
+		            out.writeObject(new Message(Message.Type.LOGIN_ERROR, "A equipa está cheia.", "Server"));
+		            closeConnection();
+		            return;
+	
+		        case OK:
+		            out.writeObject(new Message(Message.Type.LOGIN_SUCCESS, "Bem-vindo!", "Server"));
+		            break;
 			}
+			this.myGame = game;
+		    this.myTeam = game.getTeams().get(teamName);
+		    this.myPlayer = game.getPlayer(username);
+
+			if (game.areAllPlayersConnected()) {
+				System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
+    			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai começar", "Server"));
+			}
+			
 		}
 
 		

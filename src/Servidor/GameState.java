@@ -82,9 +82,21 @@ public class GameState {
 		connectedPlayers++;
 	}
 
-	public boolean areAllPlayersConnected() {
+	public synchronized boolean areAllPlayersConnected() {
 		return connectedPlayers == totalPlayersExpected;
 	}
+	
+	public synchronized Player getPlayer(String username) {
+	    for (Team t : teams.values()) {
+	        for (Player p : t.getPlayers()) {
+	            if (p.getName().equals(username)) {
+	                return p;
+	            }
+	        }
+	    }
+	    return null;
+	}
+
 
 	public List<String> getAllUsernames() {
 		List<String> list = new ArrayList<>();
@@ -125,51 +137,33 @@ public class GameState {
     }
     
     
-    public void addTeamAndPlayer(ObjectOutputStream out, GameState game, String teamName, String username){
-		if(game.repeatedUsername(username)){
-			out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-					"Username repetido.", "Server"));
-			closeConnection();
-			return;
-			
-		}
-		Map<String, Team> teams = game.getTeams();
+    public synchronized LoginResult addTeamAndPlayer(ObjectOutputStream out, String teamName, String username){
+    	if (repeatedUsername(username)) {
+            return LoginResult.USERNAME_EXISTS;
+        }
 		Team team = teams.get(teamName);
 		if (team == null) {
-			if (game.reachedTeamLimit()) {
-				out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-						"O jogo já esgotou o número de equipas previsto.", "Server"));
-				closeConnection();
-				return;
+			if (reachedTeamLimit()) {
+				 return LoginResult.TEAM_LIMIT_REACHED;
 			}
 			team = new Team(teamName);
 			teams.put(teamName, team);
 		} else {
-			if (game.isTeamFull(team)) {
-				out.writeObject(new Message(Message.Type.LOGIN_ERROR,
-						"A equipa está cheia.", "Server"));
-				closeConnection();
-				return;
+			if (isTeamFull(team)) {
+				return LoginResult.TEAM_FULL;
 			}
 		}
 
 		Player newPlayer = new Player(username);
-		team.addPlayer(new Player(username));
-		myGame = game;
-		myTeam = team;
-		myPlayer = newPlayer;
-
-		// adicionado para broadcast
-		game.addPlayerStream(out);
-
-		game.addConnectedPlayers();
-		out.writeObject(new Message(Message.Type.LOGIN_SUCCESS, "Bem-vindo!", "Server"));
+		team.addPlayer(newPlayer);
 		
-		if (game.areAllPlayersConnected()) {
-			System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
-			// lógica do broadcast (implementada no GameState)
-			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai começar", "Server"));
-		}
+
+		
+		addPlayerStream(out);
+
+		addConnectedPlayers();
+		
+		return LoginResult.OK;
 		
     }
 
