@@ -29,7 +29,7 @@ public class Client {
 
 	public void runClient() {
 		try {
-			this.gui = new GUI(this);
+			this.gui = new GUI(this, username);
 			connectToServer();
 			setStreams();
 			processConnection();
@@ -94,44 +94,88 @@ public class Client {
 
 	void waitForStart() throws IOException, ClassNotFoundException {
         System.out.println("A aguardar início do jogo...");
-        
+
         // 2. ABRIR A JANELA DE ESPERA
-        gui.open(); 
+        // Também deve ser feito na EDT
+        javax.swing.SwingUtilities.invokeLater(() -> gui.open());
 
         while (true) {
-            Object obj = in.readObject();
-            if (obj instanceof Message) {
-                Message msg = (Message) obj;
-                
-                switch (msg.getType()) {
-                    case START_GAME:
-                        System.out.println("O JOGO COMEÇOU!");
-                        break;
-                        
-                    case QUESTION:
-                        Question q = (Question) msg.getContent();
-                        System.out.println("Recebi pergunta: " + q.getQuestion());
-                        // 3. ATUALIZAR A GUI COM A PERGUNTA
-                        gui.addQuestionFrame(q); 
-                        break;
-                        
-                    case SCORE_UPDATE:
-                        Map<String, Integer> scores = (Map<String, Integer>) msg.getContent();
-                        // 4. ATUALIZAR A GUI COM O PLACAR
-                        gui.addStatsFrame(scores);
-                        break;
-                        
-                    case END_GAME:
-                        System.out.println("Fim do jogo!");
-                        gui.endOfGame();
-                        return; // Sai e fecha
-                        
-                    default:
-                        System.out.println("Msg desconhecida: " + msg.getType());
+            try {
+                Object obj = in.readObject(); // Bloqueia à espera de mensagens do servidor
+                if (obj instanceof Message) {
+                    Message msg = (Message) obj;
+
+                    switch (msg.getType()) {
+                        case START_GAME:
+                            System.out.println("O JOGO COMEÇOU!");
+                            break;
+
+                        case QUESTION:
+                            Question q = (Question) msg.getContent();
+                            System.out.println("Recebi pergunta: " + q.getQuestion());
+                            // 3. ATUALIZAR A GUI COM A PERGUNTA (na EDT)
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                gui.addQuestionFrame(q);
+                            });
+                            break;
+
+                        case ANSWER_RESULT:
+                            int points = (Integer) msg.getContent();
+                            if (points == -1) {
+                                System.out.println("Resposta registada. A aguardar pela equipa...");
+                                // Podes mostrar uma mensagem neutra na GUI ou apenas não mostrar erro
+                                javax.swing.SwingUtilities.invokeLater(() -> {
+                                    // Exemplo: Alterar o título para feedback visual sem dizer "Errado"
+                                    // Se não tiveres método para setTitle, podes ignorar ou criar um
+                                    // gui.showFeedback(true, 0) mas com texto personalizado se conseguires.
+                                    // Para já, isto evita o "ERRASTE!"
+                                });
+                            } 
+                            else if (points > 0) {
+                                System.out.println("ACERTASTE! Ganhaste " + points + " pontos.");
+                                javax.swing.SwingUtilities.invokeLater(() -> {
+                                    gui.showFeedback(true, points);
+                                });
+                            } else {
+                                // Só é erro se for 0 e não -1
+                                System.out.println("ERRASTE!");
+                                javax.swing.SwingUtilities.invokeLater(() -> {
+                                    gui.showFeedback(false, 0);
+                                });
+                            }
+                            break;
+
+                        case SCORE_UPDATE:
+                            @SuppressWarnings("unchecked")
+                            Map<String, Integer> scores = (Map<String, Integer>) msg.getContent();
+                            // 4. ATUALIZAR A GUI COM O PLACAR (na EDT)
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                gui.addStatsFrame(scores);
+                            });
+                            break;
+
+                        case END_GAME:
+                            System.out.println("Fim do jogo!");
+                            // Fechar a GUI na EDT
+                            javax.swing.SwingUtilities.invokeLater(() -> {
+                                gui.endOfGame();
+                            });
+                            return; // Sai do loop e fecha a conexão
+
+                        default:
+                            System.out.println("Msg desconhecida: " + msg.getType());
+                    }
                 }
+            } catch (java.io.StreamCorruptedException e) {
+                System.err.println("Erro crítico de sincronização de stream. A tentar recuperar...");
+                break; // Sai do jogo se a stream estiver irrecuperável
+            } catch (IOException | ClassNotFoundException e) {
+                System.out.println("Ligação perdida ou erro de leitura.");
+                break;
             }
         }
     }
+
 	public void closeConnection() {
 		try {
 			if (connection != null)

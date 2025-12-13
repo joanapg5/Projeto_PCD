@@ -15,6 +15,7 @@ public class Message implements Serializable {
         START_GAME,     // Jogo começou
         QUESTION,       // Envio de pergunta
         ANSWER,         // Envio de resposta
+        ANSWER_RESULT,
         SCORE_UPDATE,   // Atualização de pontuação
         END_GAME        // Fim do jogo
     }

@@ -1,18 +1,17 @@
 package Cliente;
 
 import Estrutura.*;
-
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
-
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.WindowConstants;
+import javax.swing.Timer;
 import java.util.Map;
 
 public class GUI {
@@ -23,10 +22,12 @@ public class GUI {
 	private JLabel timerLabel;
 	private JLabel titleLable;
 	private Client client;
+	private Timer timer;
+    private int timeRemaining;
 
-	public GUI(Client client) {
+	public GUI(Client client, String username) {
 		this.client = client;
-		frame = new JFrame("Kahoot");
+		frame = new JFrame("Kahoot - " + username); 
 		frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 	}
 
@@ -34,7 +35,7 @@ public class GUI {
 		frame.getContentPane().removeAll();
 		frame.setLayout(new BorderLayout(10, 10));
 		JPanel top = new JPanel();
-		titleLable = new JLabel("IsKahoot", JLabel.CENTER);
+		titleLable = new JLabel("", JLabel.CENTER);
 		top.add(titleLable);
 		frame.add(top, BorderLayout.NORTH);
 		String qtext = q.getQuestion();
@@ -65,16 +66,36 @@ public class GUI {
 		timerLabel = new JLabel("Tempo", JLabel.CENTER);
 		bottom.add(timerLabel);
 		frame.add(bottom, BorderLayout.SOUTH);
+		if (timer != null && timer.isRunning()) {
+			timer.stop();
+		}
+		timeRemaining = 30;
+		timerLabel.setText("Tempo: " + timeRemaining);
+		timer = new javax.swing.Timer(1000, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				timeRemaining--;
+				timerLabel.setText("Tempo: " + timeRemaining);
+				
+				if (timeRemaining <= 0) {
+					timer.stop();
+					// Bloquear botões quando o tempo acaba
+					if (optionButtons != null) {
+						for (JButton btn : optionButtons) btn.setEnabled(false);
+					}
+					titleLable.setText("TEMPO ESGOTADO!");
+					titleLable.setForeground(Color.RED);
+				}
+			}
+		});
+		timer.start();
 		for (int i = 0; i < options.length; i++) {
-            int index = i; // Necessário para usar dentro da classe anónima
+            int index = i;
             optionButtons[i].addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    // 3. ADICIONAR ESTA LÓGICA
                     // Desativar botões para impedir múltiplas respostas
                     for (JButton btn : optionButtons) btn.setEnabled(false);
-                    
-                    // Enviar a resposta ao servidor através do cliente
                     if (client != null) {
                         client.sendAnswer(index);
                     }
@@ -107,18 +128,6 @@ public class GUI {
 
 		frame.add(new JLabel("Fim da ronda", JLabel.CENTER), BorderLayout.NORTH);
 		frame.add(statsPanel, BorderLayout.CENTER);
-
-		JPanel ok = new JPanel();
-		JButton b = new JButton("Ok");
-		b.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-			}
-		});
-		ok.add(b);
-		frame.add(ok, BorderLayout.SOUTH);
 		frame.pack();
 		frame.revalidate();
 		frame.repaint();
@@ -128,6 +137,18 @@ public class GUI {
 		// para abrir a janela (torna-la visivel)
 		frame.setVisible(true);
 	}
+
+	public void showFeedback(boolean correct, int points) {
+        // Exemplo simples: Mudar a cor de fundo ou título
+        if (correct) {
+            titleLable.setText("CORRETO! (+" + points + " pts)");
+            titleLable.setForeground(Color.GREEN);
+        } else {
+            titleLable.setText("ERRADO!");
+            titleLable.setForeground(Color.RED);
+        }
+        // Podes pintar o botão correto de verde aqui se quiseres
+    }
 
 	public void endOfGame() {
 

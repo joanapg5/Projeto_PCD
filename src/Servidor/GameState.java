@@ -1,6 +1,7 @@
 package Servidor;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.io.ObjectOutputStream;
 import java.io.IOException;
 import Estrutura.Message;
@@ -8,6 +9,7 @@ import Estrutura.Player;
 import Estrutura.Question;
 import Estrutura.Team;
 import Servidor.ModifiedCountDownLatch;
+import Servidor.Barrier;
 
 public class GameState {
 
@@ -17,15 +19,12 @@ public class GameState {
 	private ModifiedCountDownLatch currentLatch;
 	private final int numTeams;
 	private final int numTeamPlayers;
-	// private final int numQuestions; //a considerar
-
-	// o mapa das teams e p facilitar a busca
+	private Barrier currentBarrier;
 	private final Map<String, Team> teams = new HashMap<>();
 	private Map<Player, Integer> playersAnswers = new HashMap<>();
 	private Map<String, Integer> scoreboard = new HashMap<>();
-	private final List<ObjectOutputStream> outputStreams = new ArrayList<>(); //para registar os canais de escrita de todos os jogadores
-	// cronometro?
-	// a considerar
+	private final List<ObjectOutputStream> outputStreams = new ArrayList<>();
+	private Map<String, Integer> currentRoundAnswers = new ConcurrentHashMap<>();
 	private int connectedPlayers = 0;
 	private final int totalPlayersExpected;
 
@@ -168,89 +167,140 @@ public class GameState {
 		
     }
 
+    public synchronized ObjectOutputStream getPlayerStream(String username) {
+        Player p = getPlayer(username);
+        if (p != null) {
+            return null; 
+        }
+        return null;
+    }
+
+    public synchronized void sendToPlayer(ObjectOutputStream targetOut, Message msg) {
+        try {
+            targetOut.writeObject(msg);
+            targetOut.reset();
+            targetOut.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 	public void runGame() {
         try {
             System.out.println("Início do Ciclo de Jogo [" + roomCode + "]");
-            
-            // Pausa inicial para garantir que clientes carregaram a GUI
             Thread.sleep(2000);
 
             for (Question q : questions) {
                 currentQuestion = questions.indexOf(q);
                 
-                // 1. Enviar Pergunta a todos
-                System.out.println("A enviar pergunta: " + q.getQuestion());
+                // --- ADICIONAR: Limpar respostas antigas ---
+                currentRoundAnswers.clear(); 
+                // ------------------------------------------
+
                 broadcast(new Message(Message.Type.QUESTION, q, "Server"));
 
-                // 2. Preparar Sincronização
                 if (q.isIndividualQuestion()) {
-                    System.out.println("Ronda Individual. A criar Latch...");
-                    // Exemplo: Bónus x2 para os primeiros 2, 30 segundos, total de jogadores conectados
-                    // Podes ajustar o '2' (bonusCount) conforme o número de jogadores
-                    int bonusCount = Math.max(1, connectedPlayers / 2); 
-                    currentLatch = new ModifiedCountDownLatch(2, bonusCount, 30, connectedPlayers);
-                    
-                    // 3. Bloquear a thread do jogo à espera das respostas ou do tempo
+                    System.out.println(">>> Ronda Individual");
+                    currentLatch = new ModifiedCountDownLatch(2, Math.max(1, connectedPlayers / 2), 30, connectedPlayers);
                     currentLatch.await(); 
-                    
+                    currentBarrier = null;
                 } else {
-                    // TODO: Implementar lógica da Barreira (Fase seguinte - Perguntas de Equipa)
-                    System.out.println("Pergunta de equipa (Barreira). Saltando espera temporariamente...");
-                    Thread.sleep(5000); 
+                    System.out.println(">>> Ronda de Equipa");
+                    currentBarrier = new Barrier(connectedPlayers + 1);
+                    currentLatch = null; 
+                    
+                    // Servidor espera na barreira (35s timeout)
+                    currentBarrier.await(35); 
+                    
+                    // --- ADICIONAR: Calcular pontos da equipa aqui ---
+                    calculateTeamScores(q);
+                    // ------------------------------------------------
                 }
 
-                // 4. Fim da Ronda: Enviar pontuações atualizadas
-                // Vamos enviar o scoreboard (Map<String, Integer>)
                 broadcast(new Message(Message.Type.SCORE_UPDATE, new HashMap<>(scoreboard), "Server"));
-                
-                // Pausa para os jogadores verem o resultado
                 Thread.sleep(3000);
             }
-
-            // Fim do Jogo
             broadcast(new Message(Message.Type.END_GAME, "O jogo terminou!", "Server"));
-
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * Processa a resposta de um jogador.
-     * Chamado pela thread 'DealWithClient' quando recebe uma msg ANSWER.
-     */
-    public synchronized void submitAnswer(String username, int answerIndex) {
-        // Encontra o jogador
-        Player player = getPlayer(username);
-        if (player == null) return;
-
-        Question curQ = getCurrentQuestion();
-        
-        // Verifica se acertou
-        if (answerIndex == curQ.getCorrect()) {
-            int points = curQ.getPoints();
+	// --- ADICIONAR ESTE MÉTODO NOVO ---
+    private synchronized void calculateTeamScores(Question q) {
+        for (Team team : teams.values()) {
+            int correctCount = 0;
             
-            // Se for individual, usa o Latch para ver se tem bónus
-            if (curQ.isIndividualQuestion() && currentLatch != null) {
-                int bonus = currentLatch.countDown(); // Decrementa e devolve o fator
-                points *= bonus;
-                if (bonus > 1) System.out.println("JOGADOR " + username + " GANHOU BÓNUS!");
+            // Verificar quantos acertaram na equipa usando o mapa currentRoundAnswers
+            for (Player p : team.getPlayers()) {
+                if (currentRoundAnswers.containsKey(p.getName())) {
+                    int ans = currentRoundAnswers.get(p.getName());
+                    if (ans == q.getCorrect()) {
+                        correctCount++;
+                    }
+                }
             }
             
-            // Atualiza pontuação do Jogador
-            player.setScore(player.getScore() + points);
+            int teamPoints = 0;
+            // Regra: Todos acertam = Dobro. Pelo menos um acerta = Normal.
+            if (correctCount == team.getNumPlayers() && team.getNumPlayers() > 0) {
+                teamPoints = q.getPoints() * 2;
+                System.out.println("Equipa " + team.getTeamName() + ": TODOS acertaram! (Bónus)");
+            } else if (correctCount > 0) {
+                teamPoints = q.getPoints();
+                System.out.println("Equipa " + team.getTeamName() + ": Pelo menos um acertou.");
+            }
             
-            // Atualiza scoreboard global (simplificado por agora: nome -> pontos)
-            // Idealmente aqui somavas também à equipa
-            scoreboard.put(username, player.getScore()); 
-        } else {
-            // Se errou, também precisamos de avisar o Latch que este jogador já respondeu?
-            // Sim, para o jogo não ficar à espera dele até ao fim do tempo.
-            // O countDown devolve 1 (sem bónus) mas decrementa o contador de respostas pendentes.
-            if (curQ.isIndividualQuestion() && currentLatch != null) {
-                currentLatch.countDown(); 
+            // Atribuir pontos a todos os membros da equipa
+            if (teamPoints > 0) {
+                for (Player p : team.getPlayers()) {
+                    p.setScore(p.getScore() + teamPoints);
+                    scoreboard.put(p.getName(), p.getScore());
+                }
             }
         }
     }
 
+    public synchronized int submitAnswer(String username, int answerIndex) {
+        Player player = getPlayer(username);
+        if (player == null) return 0;
+
+        Question curQ = getCurrentQuestion();
+        
+        // --- ADICIONAR: Guardar a resposta ---
+        currentRoundAnswers.put(username, answerIndex);
+        // -------------------------------------
+
+        int pointsAwarded = 0; 
+
+        if (curQ.isIndividualQuestion()) {
+            // Lógica Individual (igual ao que tinhas)
+            if (answerIndex == curQ.getCorrect()) {
+                int points = curQ.getPoints();
+                if (currentLatch != null) {
+                    int bonus = currentLatch.countDown();
+                    points *= bonus;
+                }
+                pointsAwarded = points;
+                player.setScore(player.getScore() + points);
+                scoreboard.put(username, player.getScore()); 
+            } else {
+                if (currentLatch != null) currentLatch.countDown(); 
+            }
+            return pointsAwarded;
+            
+        } else {
+			if (answerIndex == curQ.getCorrect()) {
+                System.out.println(">> [Equipa] O jogador " + username + " ACERTOU! (Aguardar outros...)");
+            } else {
+                System.out.println(">> [Equipa] O jogador " + username + " ERROU! (Aguardar outros...)");
+            }
+			if (currentBarrier != null) {
+                new Thread(() -> {
+                    try { currentBarrier.await(35); } catch (InterruptedException e) {}
+                }).start();
+            }
+			return -1; 
+        }
+    }
 }

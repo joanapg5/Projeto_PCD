@@ -124,11 +124,11 @@ public class Server {
 					if (nextObj instanceof Message) {
 						Message msg = (Message) nextObj;
 						System.out.println("Mensagem recebida de " + msg.getSender() + ": " + msg.getType());
-
-						// Aqui vais tratar as respostas (Fase 6)
 						if (msg.getType() == Message.Type.ANSWER) {
-							// TODO: processAnswer(msg);
-						}
+                            int answerIndex = (Integer) msg.getContent();
+                            int points = myGame.submitAnswer(myPlayer.getName(), answerIndex);
+                            myGame.sendToPlayer(out, new Message(Message.Type.ANSWER_RESULT, points, "Server"));
+                        }
 					}
 				} catch (IOException e) {
 					// O cliente desligou-se (ou o jogo acabou)
@@ -201,8 +201,8 @@ public class Server {
 	public String createCode() {
 		Random random = new Random();
 		String code = "";
-		while (true) { // gera codigos ate obter um que nao exista ja
-			int codeSize = (int) (Math.random() * (9 - 3 + 1) + 3); // numero entre 3 e 9
+		while (true) { 
+			int codeSize = 4;
 			for (int i = 0; i < codeSize; i++) {
 				int n = (int) (Math.random() * 10);
 				code += n;
