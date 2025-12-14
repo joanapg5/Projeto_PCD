@@ -176,7 +176,8 @@ public class Server {
 			if (game.areAllPlayersConnected()) {
 				System.out.println("Todos ligados. A iniciar jogo " + roomCode + "...");
     			game.broadcast(new Message(Message.Type.START_GAME, "O jogo vai começar", "Server"));
-				new Thread(() -> game.runGame()).start();
+				GameThread gameThread = new GameThread(game);
+				gameThread.start();
 			}
 			
 		}

@@ -16,10 +16,8 @@ public class GameState {
 	private final String roomCode;
 	private final List<Question> questions;
 	private int currentQuestion = 0;
-	private ModifiedCountDownLatch currentLatch;
 	private final int numTeams;
 	private final int numTeamPlayers;
-	private Barrier currentBarrier;
 	private final Map<String, Team> teams = new HashMap<>();
 	private Map<Player, Integer> playersAnswers = new HashMap<>();
 	private Map<String, Integer> scoreboard = new HashMap<>();
@@ -63,11 +61,19 @@ public class GameState {
 	public Question getCurrentQuestion() {
 		return questions.get(currentQuestion);
 	}
+	
+	public void setCurrentQuestion(int index){
+		this.currentQuestion=index;
+	}
 
 	public void nextQuestion() {
 		if (currentQuestion < questions.size() - 1) {
 			currentQuestion++;
 		}
+	}
+	
+	public void cleanAnswers(){
+		this.currentRoundAnswers.clear();
 	}
 
 	public boolean isTeamFull(Team team) {
@@ -80,6 +86,10 @@ public class GameState {
 
 	public void addConnectedPlayers() {
 		connectedPlayers++;
+	}
+	
+	public int getConnectedPlayers(){
+		return connectedPlayers;
 	}
 
 	public synchronized boolean areAllPlayersConnected() {
@@ -185,49 +195,9 @@ public class GameState {
         }
     }
 
-	public void runGame() {
-        try {
-            System.out.println("Início do Ciclo de Jogo [" + roomCode + "]");
-            Thread.sleep(2000);
-
-            for (Question q : questions) {
-                currentQuestion = questions.indexOf(q);
-                
-                // --- ADICIONAR: Limpar respostas antigas ---
-                currentRoundAnswers.clear(); 
-                // ------------------------------------------
-
-                broadcast(new Message(Message.Type.QUESTION, q, "Server"));
-
-                if (q.isIndividualQuestion()) {
-                    System.out.println(">>> Ronda Individual");
-                    currentLatch = new ModifiedCountDownLatch(2, Math.max(1, connectedPlayers / 2), 30, connectedPlayers);
-                    currentLatch.await(); 
-                    currentBarrier = null;
-                } else {
-                    System.out.println(">>> Ronda de Equipa");
-                    currentBarrier = new Barrier(connectedPlayers + 1);
-                    currentLatch = null; 
-                    
-                    // Servidor espera na barreira (35s timeout)
-                    currentBarrier.await(35); 
-                    
-                    // --- ADICIONAR: Calcular pontos da equipa aqui ---
-                    calculateTeamScores(q);
-                    // ------------------------------------------------
-                }
-
-                broadcast(new Message(Message.Type.SCORE_UPDATE, new HashMap<>(scoreboard), "Server"));
-                Thread.sleep(3000);
-            }
-            broadcast(new Message(Message.Type.END_GAME, "O jogo terminou!", "Server"));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
+	
 	// --- ADICIONAR ESTE MÉTODO NOVO ---
-    private synchronized void calculateTeamScores(Question q) {
+    public synchronized void calculateTeamScores(Question q) {
         for (Team team : teams.values()) {
             int correctCount = 0;
             
