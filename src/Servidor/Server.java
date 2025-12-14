@@ -17,7 +17,7 @@ public class Server {
 
 	private ServerSocket server;
 	private Map<String, GameState> games = new ConcurrentHashMap<>(); 
-	private GameThreadPool gamePool = new GameThreadPool(5);
+	private GameThreadPool gamePool = new GameThreadPool(1);
 
 
 	public void runServer() {
