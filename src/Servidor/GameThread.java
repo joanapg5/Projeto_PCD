@@ -37,7 +37,13 @@ public class GameThread extends Thread{
                     game.setBarrier(null);
                 } else {
                     System.out.println(">>> Ronda de Equipa");
-                    game.setBarrier(new Barrier(game.getConnectedPlayers() + 1));
+                    if(game.getBarrier()==null){ //se nao existir ainda
+                        game.setBarrier(new Barrier(game.getConnectedPlayers() + 1));
+
+                    }else{
+                    	game.getBarrier().reset();
+                    }
+             
                     game.setLatch(null);
                     
                     // Servidor espera na barreira (35s timeout)
