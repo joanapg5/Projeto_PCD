@@ -134,6 +134,7 @@ public class Client {
                         case END_GAME:
                             System.out.println("Fim do jogo!");
                             gui.endOfGame();
+                            gui.close();
                             return;
 
                         default:

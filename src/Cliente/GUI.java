@@ -130,6 +130,10 @@ public class GUI {
 	public void open() {
 		frame.setVisible(true);
 	}
+	
+	public void close(){
+		frame.setVisible(false);
+	}
 
 	public void showFeedback(boolean correct, int points) {
         if (correct) {
