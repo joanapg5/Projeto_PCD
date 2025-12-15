@@ -111,12 +111,12 @@ public class GUI {
 		JPanel statsPanel = new JPanel();
 		statsPanel.setLayout(new GridLayout(scoreboard.size() + 1, 2, 10, 10));
 
-		statsPanel.add(new JLabel("Equipa", JLabel.CENTER));
+		statsPanel.add(new JLabel("Jogador", JLabel.CENTER));
 		statsPanel.add(new JLabel("Pontuacao", JLabel.CENTER));
 
-		for (String teamName : scoreboard.keySet()) {
-			int score = scoreboard.get(teamName);
-			statsPanel.add(new JLabel(teamName, JLabel.CENTER));
+		for (String playerName : scoreboard.keySet()) {
+			int score = scoreboard.get(playerName);
+			statsPanel.add(new JLabel(playerName, JLabel.CENTER));
 			statsPanel.add(new JLabel(String.valueOf(score), JLabel.CENTER));
 		}
 
@@ -131,9 +131,7 @@ public class GUI {
 		frame.setVisible(true);
 	}
 	
-	public void close(){
-		frame.setVisible(false);
-	}
+	
 
 	public void showFeedback(boolean correct, int points) {
         if (correct) {

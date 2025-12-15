@@ -7,15 +7,12 @@ public class Team {
 
 	private final String teamName;
 	private final List<Player> players = new ArrayList<>();
-	private int totalScore = 0;
 
 	public Team(String teamName) {
 		this.teamName = teamName;
 	}
 
-	public void setTotalScore(int totalScore) {
-		this.totalScore = totalScore;
-	}
+	
 
 	public void addPlayer(Player player) {
 		this.players.add(player);
@@ -33,8 +30,5 @@ public class Team {
 		return players.size();
 	}
 
-	public int getTotalScore() {
-		return totalScore;
-	}
-
+	
 }

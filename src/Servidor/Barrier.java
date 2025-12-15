@@ -9,7 +9,6 @@ public class Barrier {
 
     private final int participants;
     private int count;
-    private int generation = 0; 
     private final Lock lock = new ReentrantLock();
     private final Condition barrierOpen = lock.newCondition();
 
@@ -21,16 +20,13 @@ public class Barrier {
     public void await(long timeoutSeconds) throws InterruptedException {
         lock.lock();
         try {
-            int myGeneration = generation; 
             count++;
 
             if (count == participants) {
-                count = 0;
-                generation++; 
                 barrierOpen.signalAll();
             } else {
                 long nanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
-                while (count < participants && generation == myGeneration) {
+                while (count < participants) {
                     if (nanos <= 0L) {
                         break; 
                     }
@@ -42,14 +38,5 @@ public class Barrier {
         }
     }
     
-    public void reset() {
-        lock.lock();
-        try {
-            generation++;    
-            count = 0;        
-            barrierOpen.signalAll(); 
-        } finally {
-            lock.unlock();
-        }
-    }
+    
 }

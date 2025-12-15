@@ -19,7 +19,6 @@ public class GameState {
 	private final int numTeams;
 	private final int numTeamPlayers;
 	private final Map<String, Team> teams = new HashMap<>();
-	private Map<Player, Integer> playersAnswers = new HashMap<>();
 	private Map<String, Integer> scoreboard = new HashMap<>();
 	private final List<ObjectOutputStream> outputStreams = new ArrayList<>();
 	private Map<String, Integer> currentRoundAnswers = new ConcurrentHashMap<>();
@@ -48,9 +47,7 @@ public class GameState {
 		return questions;
 	}
 
-	public Map<Player, Integer> getPlayersAnswers() {
-		return playersAnswers;
-	}
+	
 
 	public Map<String, Integer> getScoreboard() {
 		return scoreboard;
@@ -138,9 +135,7 @@ public class GameState {
         outputStreams.add(out);
     }
     
-    public synchronized void removePlayerStream(ObjectOutputStream out){
-    	outputStreams.remove(out);
-    }
+    
 
     
     public synchronized void broadcast(Message msg) {
@@ -195,13 +190,7 @@ public class GameState {
 		
     }
 
-    public synchronized ObjectOutputStream getPlayerStream(String username) {
-        Player p = getPlayer(username);
-        if (p != null) {
-            return null; 
-        }
-        return null;
-    }
+    
 
     public synchronized void sendToPlayer(ObjectOutputStream targetOut, Message msg) {
         try {
@@ -283,6 +272,57 @@ public class GameState {
                 }).start();
             }
 			return -1; 
+        }
+    }
+    
+    
+    public synchronized void playerDisconnected(String username, ObjectOutputStream out) {
+        
+       
+        if (out != null) {
+            outputStreams.remove(out);
+            System.out.println("Stream removida para o jogador " + username + ".");
+        }
+        
+        Player p = getPlayer(username);
+        if (p == null) return;
+
+        System.out.println("A processar saida do jogador: " + username);
+
+        
+        Iterator<Team> teamIterator = teams.values().iterator();
+        while (teamIterator.hasNext()) {
+            Team t = teamIterator.next();
+            if (t.getPlayers().contains(p)) {
+                t.getPlayers().remove(p);
+                
+                if (t.getPlayers().isEmpty()) {
+                    teamIterator.remove(); 
+                    System.out.println("Equipa " + t.getTeamName() + " ficou vazia e foi removida.");
+                }
+                break;
+            }
+        }
+        
+      
+        scoreboard.remove(username);
+        
+        if (connectedPlayers > 0) {
+            connectedPlayers--;
+        }
+
+        if (currentLatch != null) {
+            currentLatch.countDown(); //para nao atrasar o jogo
+        }
+
+        if (currentBarrier != null) {
+            new Thread(() -> { //thread para nao atrasar o jogo dps do cliente se desconectar
+                try { 
+                    currentBarrier.await(1); 
+                } catch (InterruptedException e) {
+                 
+                }
+            }).start();
         }
     }
 	

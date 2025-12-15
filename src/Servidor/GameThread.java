@@ -22,6 +22,11 @@ public class GameThread extends Thread{
             List<Question> questions=game.getQuestions();
 
             for (Question q : questions) {
+            	if (game.getConnectedPlayers() < 1) {
+                    System.out.println("Jogo abortado. Jogadores insuficientes.");
+                    game.broadcast(new Message(Message.Type.END_GAME, "O jogo terminou!", "Server"));
+                    return; //termina a game thread
+            	}
                 game.setCurrentQuestion(questions.indexOf(q));
                 
                 game.cleanAnswers();
@@ -29,23 +34,16 @@ public class GameThread extends Thread{
                 game.broadcast(new Message(Message.Type.QUESTION, q, "Server"));
 
                 if (q.isIndividualQuestion()) {
+                	game.setBarrier(null);
                     System.out.println(">>> Ronda Individual");
                     game.setLatch(new ModifiedCountDownLatch(2, 2, 30, game.getConnectedPlayers()));
                     game.getLatch().await();
-                    game.setBarrier(null);
+                    
                 } else {
+                	game.setLatch(null);
                     System.out.println(">>> Ronda de Equipa");
-                    if(game.getBarrier()==null){ //se nao existir ainda
-                        game.setBarrier(new Barrier(game.getConnectedPlayers() + 1));
-
-                    }else{
-                    	game.getBarrier().reset();
-                    }
-             
-                    game.setLatch(null);
-                    
+                    game.setBarrier(new Barrier(game.getConnectedPlayers() + 1));
                     game.getBarrier().await(35); 
-                    
                     game.calculateTeamScores(q);
                 }
 

@@ -59,6 +59,55 @@ public class Server {
 		handler.start();
 		System.out.println("Comecada nova conexao...");
 	}
+	
+	public String createCode() {
+		Random random = new Random();
+		String code = "";
+		while (true) { 
+			int codeSize = 4;
+			for (int i = 0; i < codeSize; i++) {
+				int n = (int) (Math.random() * 10);
+				code += n;
+			}
+			if (!games.containsKey(code))
+				break;
+		}
+
+		return code;
+
+	}
+
+	public void processCommand(String cmd) {
+		String[] s = cmd.split(" ");
+		if (s[0].equals("new")) {
+			int numTeams = Integer.parseInt(s[1]);
+			int numTeamPlayers = Integer.parseInt(s[2]);
+			int numQuestions = Integer.parseInt(s[3]);
+			
+			if (numTeams <= 0 || numTeamPlayers <= 0 || numQuestions <= 0 || numQuestions > 7) { //limita a 7 para este ficheiro mas se mudasse o ficheiro mudavamos e so para evitar erros
+                System.out.println("Erro: O numero de equipas, jogadores e perguntas tem de ser maior que 0.");
+                return; 
+            }
+
+			String code = createCode();
+			List<Question> questions = null;
+			try {
+				questions = QuestionLoader.load("dados/quizzes.json", numQuestions);
+			} catch (Exception e) {
+				e.printStackTrace();
+				return;
+			}
+			GameState g = new GameState(code, numTeams, numTeamPlayers, questions);
+			games.put(code, g);
+
+			System.out.println("Nova sala criada com o codigo: " + code
+				+ "\numero de equipas: " + numTeams
+				+ "\numero de jogadores por equipa: " + numTeamPlayers
+				+ "\numero de perguntas: " + numQuestions
+			);
+		}
+
+	}
 
 	private class DealWithClient extends Thread {
 		private Socket connection;
@@ -81,6 +130,9 @@ public class Server {
 			} catch (Exception e) { 
 				e.printStackTrace();
 			} finally {
+				if (myGame != null && myPlayer != null) {
+		            myGame.playerDisconnected(myPlayer.getName(), out);
+		        }
 				closeConnection();
 			}
 		}
@@ -125,7 +177,6 @@ public class Server {
 					}
 				} catch (IOException e) {
 					System.out.println("Cliente desconectou-se.");
-					myGame.removePlayerStream(out);
 					break; 
 				}
 			}
@@ -190,49 +241,7 @@ public class Server {
 
 	}
 
-	public String createCode() {
-		Random random = new Random();
-		String code = "";
-		while (true) { 
-			int codeSize = 4;
-			for (int i = 0; i < codeSize; i++) {
-				int n = (int) (Math.random() * 10);
-				code += n;
-			}
-			if (!games.containsKey(code))
-				break;
-		}
-
-		return code;
-
-	}
-
-	public void processCommand(String cmd) {
-		String[] s = cmd.split(" ");
-		if (s[0].equals("new")) {
-			int numTeams = Integer.parseInt(s[1]);
-			int numTeamPlayers = Integer.parseInt(s[2]);
-			int numQuestions = Integer.parseInt(s[3]);
-
-			String code = createCode();
-			List<Question> questions = null;
-			try {
-				questions = QuestionLoader.load("dados/quizzes.json", numQuestions);
-			} catch (Exception e) {
-				e.printStackTrace();
-				return;
-			}
-			GameState g = new GameState(code, numTeams, numTeamPlayers, questions);
-			games.put(code, g);
-
-			System.out.println("Nova sala criada com o codigo: " + code
-				+ "\numero de equipas: " + numTeams
-				+ "\numero de jogadores por equipa: " + numTeamPlayers
-				+ "\numero de perguntas: " + numQuestions
-			);
-		}
-
-	}
+	
 
 	public static void main(String[] args) {
 

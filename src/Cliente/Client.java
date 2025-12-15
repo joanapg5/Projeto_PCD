@@ -1,18 +1,18 @@
 package Cliente;
-
+import javax.swing.SwingUtilities;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Map;
-
-import Servidor.Server;
 import Estrutura.Message;
 import Estrutura.Question;
 
 public class Client {
-
+	
+	private String serverIP;
+    private int serverPort;
 	private Socket connection;
 	private ObjectInputStream in;  
     private ObjectOutputStream out; 
@@ -21,7 +21,9 @@ public class Client {
 	private String teamName;
 	private String username;
 
-	public Client(String roomCode, String teamName, String username) {
+	public Client(String serverIP, int serverPort, String roomCode, String teamName, String username) {
+		this.serverIP = serverIP;
+        this.serverPort = serverPort;
 		this.roomCode = roomCode;
 		this.teamName = teamName;
 		this.username = username;
@@ -47,9 +49,9 @@ public class Client {
     }
 
 	void connectToServer() throws IOException {
-		InetAddress endereco = InetAddress.getByName(null);
+		InetAddress endereco = InetAddress.getByName(serverIP);
 		System.out.println("Endereco:" + endereco);
-		connection = new Socket(endereco, Server.PORT);
+		connection = new Socket(endereco, serverPort);
 		System.out.println("Socket:" + connection);
 
 	}
@@ -80,7 +82,6 @@ public class Client {
 
 	public void sendAnswer(int index) {
         try {
-            
             out.writeObject(new Message(Message.Type.ANSWER, index, username));
             out.flush(); 
         } catch (IOException e) {
@@ -91,7 +92,7 @@ public class Client {
 	void waitForStart() throws IOException, ClassNotFoundException {
         System.out.println("A aguardar inicio do jogo...");
 
-        gui.open();
+        SwingUtilities.invokeLater(() -> gui.open());
 
         while (true) {
             try {
@@ -107,7 +108,7 @@ public class Client {
                         case QUESTION:
                             Question q = (Question) msg.getContent();
                             System.out.println("Recebi pergunta: " + q.getQuestion());
-                            gui.addQuestionFrame(q);
+                            SwingUtilities.invokeLater(() -> gui.addQuestionFrame(q));
                             break;
 
                         case ANSWER_RESULT:
@@ -118,23 +119,22 @@ public class Client {
                             } 
                             else if (points > 0) {
                                 System.out.println("ACERTASTE! Ganhaste " + points + " pontos.");
-                                gui.showFeedback(true, points);
+                                SwingUtilities.invokeLater(() -> gui.showFeedback(true, points));
                                 
                             } else {
                                 System.out.println("ERRASTE!");
-                                gui.showFeedback(false, 0);
+                                SwingUtilities.invokeLater(() -> gui.showFeedback(false, 0));
                             }
                             break;
 
                         case SCORE_UPDATE:
                             Map<String, Integer> scores = (Map<String, Integer>) msg.getContent();
-                            gui.addStatsFrame(scores);
+                            SwingUtilities.invokeLater(() -> gui.addStatsFrame(scores));
                             break;
 
                         case END_GAME:
                             System.out.println("Fim do jogo!");
-                            gui.endOfGame();
-                            gui.close();
+                            SwingUtilities.invokeLater(() -> gui.endOfGame());
                             return;
 
                         default:
@@ -168,16 +168,17 @@ public class Client {
 
 	public static void main(String[] args) {
 
-		if (args.length != 3) {
-			System.out.println("Insira os dados no formato <Jogo> <Equipa> <Username>");
+		if (args.length != 5) {
+			System.out.println("Insira os dados no formato <IP> <Port> <Jogo> <Equipa> <Username>");
 			return;
 		}
+		String ip = args[0];
+        int port = Integer.parseInt(args[1]);
+		String roomCode = args[2];
+		String teamName = args[3];
+		String username = args[4];
 
-		String roomCode = args[0];
-		String teamName = args[1];
-		String username = args[2];
-
-		new Client(roomCode, teamName, username).runClient();
+		new Client(ip, port, roomCode, teamName, username).runClient();
 	}
 
 }
