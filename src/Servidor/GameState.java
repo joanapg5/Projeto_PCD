@@ -267,7 +267,7 @@ public class GameState {
                 System.out.println(">> [Equipa] O jogador " + username + " ERROU! (Aguardar outros...)");
             }
 			if (currentBarrier != null) {
-                new Thread(() -> {
+                new Thread(() -> { // thread para aguardar na barreira
                     try { currentBarrier.await(35); } catch (InterruptedException e) {}
                 }).start();
             }
@@ -277,8 +277,6 @@ public class GameState {
     
     
     public synchronized void playerDisconnected(String username, ObjectOutputStream out) {
-        
-       
         if (out != null) {
             outputStreams.remove(out);
             System.out.println("Stream removida para o jogador " + username + ".");
@@ -286,17 +284,17 @@ public class GameState {
         
         Player p = getPlayer(username);
         if (p == null) return;
-
+        
         System.out.println("A processar saida do jogador: " + username);
-
+        boolean jaRespondeu = currentRoundAnswers.containsKey(username);
         
         Iterator<Team> teamIterator = teams.values().iterator();
         while (teamIterator.hasNext()) {
             Team t = teamIterator.next();
             if (t.getPlayers().contains(p)) {
-                t.getPlayers().remove(p);
+                t.getPlayers().remove(p); //remove o jogador da equipa correspondente
                 
-                if (t.getPlayers().isEmpty()) {
+                if (t.getPlayers().isEmpty()) { //se a equipa ficar vazia removemo-la
                     teamIterator.remove(); 
                     System.out.println("Equipa " + t.getTeamName() + " ficou vazia e foi removida.");
                 }
@@ -312,17 +310,22 @@ public class GameState {
         }
 
         if (currentLatch != null) {
-            currentLatch.countDown(); //para nao atrasar o jogo
+        	if (!jaRespondeu) { //para nao atrasar o jogo na ronda em q saiu, faz countdown na mesma se ainda nao tinha respondido
+                currentLatch.countDown();
+                System.out.println("Latch decrementado por saida (sem resposta).");
+           }
         }
 
         if (currentBarrier != null) {
-            new Thread(() -> { //thread para nao atrasar o jogo dps do cliente se desconectar
-                try { 
-                    currentBarrier.await(1); 
-                } catch (InterruptedException e) {
-                 
-                }
-            }).start();
+        	if(!jaRespondeu){
+	            new Thread(() -> { //thread para nao atrasar o jogo dps do cliente se desconectar se ainda nao tinha respondido
+	                try { 
+	                    currentBarrier.await(1); 
+	                } catch (InterruptedException e) {
+	                 
+	                }
+	            }).start();
+        	}
         }
     }
 	

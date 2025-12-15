@@ -6,7 +6,7 @@ import java.util.List;
 import Estrutura.Message;
 import Estrutura.Question;
 
-public class GameThread extends Thread{
+public class GameThread extends Thread{ //Thread do jogo : executa do ciclo do jogo
 	private GameState game;
 	
 	
@@ -37,13 +37,13 @@ public class GameThread extends Thread{
                 	game.setBarrier(null);
                     System.out.println(">>> Ronda Individual");
                     game.setLatch(new ModifiedCountDownLatch(2, 2, 30, game.getConnectedPlayers()));
-                    game.getLatch().await();
+                    game.getLatch().await(); //espera que todos os jogadores respondam
                     
                 } else {
                 	game.setLatch(null);
                     System.out.println(">>> Ronda de Equipa");
                     game.setBarrier(new Barrier(game.getConnectedPlayers() + 1));
-                    game.getBarrier().await(35); 
+                    game.getBarrier().await(35); //espera que todos os jogadores respondam
                     game.calculateTeamScores(q);
                 }
 

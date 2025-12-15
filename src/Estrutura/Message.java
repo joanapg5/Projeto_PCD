@@ -28,7 +28,7 @@ public class Message implements Serializable {
         this.sender = sender;
     }
 
-    // Getters
+   
     public Type getType() {
         return type;
     }

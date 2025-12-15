@@ -17,7 +17,7 @@ public class Server {
 
 	private ServerSocket server;
 	private Map<String, GameState> games = new ConcurrentHashMap<>(); 
-	private GameThreadPool gamePool = new GameThreadPool(1);
+	private GameThreadPool gamePool = new GameThreadPool(5);
 
 
 	public void runServer() {
@@ -30,14 +30,14 @@ public class Server {
 					while (true) {
 						System.out.print("> ");
 						String cmd = sc.nextLine();
-						processCommand(cmd);
+						processCommand(cmd); //processa o comando new <numequipas > < numjogadoresporequipa > < numperguntas >
 
 					}
 
 				}
 			}).start();
 			while (true) {
-				waitForConnection();
+				waitForConnection(); //espera que um cliente se conecte
 
 			}
 		} catch (IOException e) {
@@ -84,8 +84,8 @@ public class Server {
 			int numTeamPlayers = Integer.parseInt(s[2]);
 			int numQuestions = Integer.parseInt(s[3]);
 			
-			if (numTeams <= 0 || numTeamPlayers <= 0 || numQuestions <= 0 || numQuestions > 7) { //limita a 7 para este ficheiro mas se mudasse o ficheiro mudavamos e so para evitar erros
-                System.out.println("Erro: O numero de equipas, jogadores e perguntas tem de ser maior que 0.");
+			if (numTeams <= 0 || numTeamPlayers <= 0 || numQuestions <= 0 || numQuestions > 7) { //limita a 7 para este ficheiro mas se mudasse o ficheiro mudavamos, e so para evitar erros
+                System.out.println("Erro: O numero de equipas, jogadores ou perguntas invalido.");
                 return; 
             }
 
@@ -109,7 +109,7 @@ public class Server {
 
 	}
 
-	private class DealWithClient extends Thread {
+	private class DealWithClient extends Thread { //Thread que gere a ligacao com o cliente
 		private Socket connection;
 		private ObjectInputStream in; 
 		private ObjectOutputStream out; 

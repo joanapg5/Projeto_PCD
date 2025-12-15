@@ -92,9 +92,9 @@ public class Client {
 	void waitForStart() throws IOException, ClassNotFoundException {
         System.out.println("A aguardar inicio do jogo...");
 
-        SwingUtilities.invokeLater(() -> gui.open());
+        SwingUtilities.invokeLater(() -> gui.open()); //invoke later e usado porque Swing não é thread-safe
 
-        while (true) {
+        while (true) { //espera por mensagem do servidor
             try {
                 Object obj = in.readObject(); 
                 if (obj instanceof Message) {
@@ -169,7 +169,7 @@ public class Client {
 	public static void main(String[] args) {
 
 		if (args.length != 5) {
-			System.out.println("Insira os dados no formato <IP> <Port> <Jogo> <Equipa> <Username>");
+			System.out.println("Insira os argumentos no formato <IP> <Port> <Jogo> <Equipa> <Username>");
 			return;
 		}
 		String ip = args[0];

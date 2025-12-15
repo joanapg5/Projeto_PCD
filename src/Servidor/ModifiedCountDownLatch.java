@@ -2,16 +2,16 @@ package Servidor;
 
 public class ModifiedCountDownLatch {
     
-    private final int bonusFactor;      // Fator de multiplicacao 
-    private int bonusCount;             // Quantas pessoas ainda podem receber bonus
-    private final long waitPeriod;      // Tempo limite em milissegundos
-    private int count;                  // Quantas respostas faltam para abrir a barreira
+    private final int bonusFactor;      
+    private int bonusCount;             
+    private final long waitPeriod;     
+    private int count;                 
     
    
     public ModifiedCountDownLatch(int bonusFactor, int bonusCount, int waitPeriodInSeconds, int count) {
         this.bonusFactor = bonusFactor;
         this.bonusCount = bonusCount;
-        this.waitPeriod = waitPeriodInSeconds * 1000L; // Converter para ms
+        this.waitPeriod = waitPeriodInSeconds * 1000L; // converter para ms
         this.count = count;
     }
 
@@ -22,17 +22,16 @@ public class ModifiedCountDownLatch {
     public synchronized int countDown() {
         int currentBonus = 1;
 
-        // Se ainda estamos a espera de respostas
         if (count > 0) {
             count--;
             
-            // Verifica se este jogador ainda pode apanhar um bonus
+            // verifica se este jogador ainda pode apanhar um bonus
             if (bonusCount > 0) {
                 currentBonus = bonusFactor;
                 bonusCount--;
             }
 
-            // Se foi o ultimo a responder, acorda a thread principal do jogo
+            // se foi o ultimo a responder, acorda a thread principal do jogo
             if (count == 0) {
                 notifyAll();
             }
@@ -59,8 +58,6 @@ public class ModifiedCountDownLatch {
             timeElapsed = System.currentTimeMillis() - startTime;
         }
         
-        // Se sairmos do loop, ou count == 0 (todos responderam) 
-        // ou timeElapsed >= waitPeriod (tempo acabou).
-        // Em ambos os casos, o servidor pode prosseguir.
+        
     }
 }

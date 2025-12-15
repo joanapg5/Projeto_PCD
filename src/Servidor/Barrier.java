@@ -23,14 +23,15 @@ public class Barrier {
             count++;
 
             if (count == participants) {
-                barrierOpen.signalAll();
+                barrierOpen.signalAll(); //se for o ultimo a chegar, acorda todos
             } else {
-                long nanos = TimeUnit.SECONDS.toNanos(timeoutSeconds);
+                long nanos = TimeUnit.SECONDS.toNanos(timeoutSeconds); //tempo maximo que vai ficar a dormir
                 while (count < participants) {
                     if (nanos <= 0L) {
-                        break; 
+                        break; //sai do loop se der timeout
                     }
-                    nanos = barrierOpen.awaitNanos(nanos);
+                    nanos = barrierOpen.awaitNanos(nanos); //a funcao devolve o tempo que ainda falta esperar caso a thread acorde por falso sinal 
+                    										//e assim volta a dormir se ainda nao chegaram todos
                 }
             }
         } finally {
