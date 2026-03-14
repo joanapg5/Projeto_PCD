@@ -20,7 +20,7 @@ O projeto foca-se na resolução de problemas de sincronização e coordenação
 ## Como Executar
 
 ### 1. Correr o Servidor
-### 2. Criar uma Sala no Servidor
+### 2. Criar uma sala no Servidor
 
 No terminal do servidor, criar uma sala utilizando o comando:
 
